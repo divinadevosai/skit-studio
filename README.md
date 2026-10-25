@@ -10,7 +10,7 @@ Made by [SWE3WE](https://swe3we.dev), and used for the Divina and Obstat skits.
 
 - [Claude Code](https://claude.com/claude-code)
 - [Node.js](https://nodejs.org) 20 or newer
-- [Python](https://python.org) 3.10 or newer (on Windows, tick "Add python.exe to PATH" when installing)
+- [Python](https://python.org) 3.10 or newer (on Windows, tick "Add python.exe to PATH" when installing). Setup installs Piper and numpy into it with pip; use a virtual environment first if you'd rather keep them separate.
 - About 600 MB of disk space for the browser, voice model and tools. A graphics card makes rendering much faster, but isn't required.
 
 ## Install
@@ -63,8 +63,10 @@ All the options are in [reference/project.md](reference/project.md), and [exampl
 
 - The code is under the [MIT licence](LICENSE).
 - Fonts: Fraunces, Instrument Sans and JetBrains Mono, under the SIL Open Font License ([engine/fonts](engine/fonts)).
-- Voices: [Piper](https://github.com/OHF-Voice/piper1-gpl) (installed on your computer, GPL-3.0) with the VCTK voice model. Videos that use the VCTK voices should credit "Voices: Piper TTS, VCTK corpus (CC BY 4.0)"; Claude adds this to your captions.
+- Voices: [Piper](https://github.com/OHF-Voice/piper1-gpl) (installed on your computer by setup, GPL-3.0) with the VCTK voice model, made from the [CSTR VCTK Corpus](https://doi.org/10.7488/ds/2645) (University of Edinburgh, attribution licence). Credit it in your posts: "Voices: Piper TTS with the VCTK corpus (CSTR, University of Edinburgh)". Claude adds this to your captions.
 - The music is generated fresh for every episode, so it's yours to use.
 - Rendering uses [three.js](https://threejs.org) (MIT), [Playwright](https://playwright.dev) (Apache-2.0) and [ffmpeg](https://ffmpeg.org) via [ffmpeg-static](https://github.com/eugeneware/ffmpeg-static) (GPL builds).
+
+Nothing is uploaded anywhere: the voices, music and video are all made on your computer, and the only downloads are during setup (the Python packages, the voice model and the browser).
 
 You're responsible for what your skits say about your product and anyone else's. The skill tells Claude to stick to facts from your docs, but check every script before you make it.

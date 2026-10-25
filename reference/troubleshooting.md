@@ -10,5 +10,6 @@
 | Rendering is very slow | Normal without a graphics card. Render overnight, or render previews only while you're writing. |
 | A pop-up hides the host's face | Move the `pop` to a line with the `host` shot, or use fewer list items. |
 | Text is tiny on a pop-up | It shrank to fit. Shorten it. |
+| `ffmpeg` not found, or `npm install` couldn't download it | Install ffmpeg yourself (ffmpeg.org, or `winget install ffmpeg` on Windows) and set `FFMPEG` to its path. |
 | `FFMPEG is not set` | Run through `make.mjs`, not the Python scripts on their own. |
-| Your own recordings are used but the timing is off | Name them `l00.wav`, `l01.wav`, … in exactly the order of `lines`, one file per line. |
+| Your own recordings are used but the timing is off | Name them `l00`, `l01`, … (.wav, .m4a or .mp3) in exactly the order of `lines`, one file per line. |

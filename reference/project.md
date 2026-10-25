@@ -68,6 +68,6 @@ Good pairs: blue `#071133`/`#5c94ff`, purple `#1a0833`/`#a46bff`, green `#03241a
 | `musicMood` | `calm` or `bright`. |
 | `musicFile` | Your own music file instead (you must have the rights to it). |
 | `endCardSeconds` | How long the end card stays (default 3.2). |
-| `credit` | The voice credit for captions. Keep it if you use the VCTK model. |
+| `credit` | The voice credit for captions. Keep it if you use the VCTK model; for another Piper voice, use what its MODEL_CARD asks for. |
 | `style.emoji` | Whether captions use emojis. |
 | `handles` | The user's account names, for captions. |

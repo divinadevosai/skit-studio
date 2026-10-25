@@ -12,9 +12,13 @@ TRIM = ('silenceremove=start_periods=1:start_threshold=-45dB:stop_periods=-1:sto
 AI = 'highpass=f=110,equalizer=f=4000:t=q:w=1:g=4,aecho=0.8:0.55:14:0.3,aecho=0.8:0.4:45:0.12'
 t, out = 0.5, []
 for i, line in enumerate(episode['lines']):
-    src = os.path.join(raw_dir or os.path.join(build, 'raw'), f'l{i:02d}.wav')
-    if not os.path.exists(src):
-        sys.exit(f'Missing {src}')
+    folder = raw_dir or os.path.join(build, 'raw')
+    # your own recordings can be any common format: l00.wav, l00.m4a (iPhone), l00.mp3 ...
+    found = [os.path.join(folder, f'l{i:02d}{ext}') for ext in ('.wav', '.m4a', '.mp3', '.aac', '.ogg', '.flac', '.webm')]
+    found = [f for f in found if os.path.exists(f)]
+    if not found:
+        sys.exit(f'Missing the recording for line {i} (l{i:02d}.wav, .m4a or .mp3) in {folder}')
+    src = found[0]
     dst = os.path.join(build, f'v{i:02d}.wav')
     chain = [TRIM]
     if raw_dir: chain.append('atempo=1.06')  # Piper is already sped up at the source

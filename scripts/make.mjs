@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// npm run make -- <episode folder> [--project <folder>] [--voices <folder>] [--preview 3,12.5] [--no-music]
+// node scripts/make.mjs <episode folder> [--project <folder>] [--voices <folder>] [--preview 3,12.5] [--no-music]
 // Runs every step and writes <episode>/video.mp4. With --preview, writes still frames instead.
 import { spawn, spawnSync } from 'node:child_process';
 import http from 'node:http';
@@ -19,7 +19,7 @@ const voiceArg = flag('--voices'); const voicesDir = voiceArg && path.resolve(HE
 const noMusic = has('--no-music');
 const projectDir = path.resolve(HERE, flag('--project') || '.');
 const epDir = path.resolve(HERE, args[0] || '');
-if (!args[0] || !fs.existsSync(path.join(epDir, 'episode.json'))) { console.error('Usage: npm run make -- <episode folder>  (it must contain episode.json)'); process.exit(1); }
+if (!args[0] || !fs.existsSync(path.join(epDir, 'episode.json'))) { console.error('Usage, from your project folder: node <skill folder>/scripts/make.mjs <episode folder>  (it must contain episode.json)'); process.exit(1); }
 if (!fs.existsSync(path.join(projectDir, 'project.json'))) { console.error(`No project.json in ${projectDir}. Run from your project folder, or pass --project <folder>.`); process.exit(1); }
 const project = JSON.parse(fs.readFileSync(path.join(projectDir, 'project.json'), 'utf8'));
 const FFMPEG = process.env.FFMPEG || require('ffmpeg-static');
@@ -27,6 +27,25 @@ const PY = process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'pyt
 const env = { ...process.env, FFMPEG, PYTHON: PY, PYTHONIOENCODING: 'utf-8' };
 const py = (script, ...rest) => { const r = spawnSync(PY, [path.join(ROOT, 'scripts', script), ...rest], { stdio: 'inherit', env }); if (r.status !== 0) process.exit(r.status || 1); };
 const build = path.join(epDir, 'build');
+
+// catch script mistakes now, not five minutes into a render
+const POP_TYPES = ['image', 'list', 'tiles', 'terminal', 'button', 'form', 'end'];
+const SHOT_NAMES = ['guest', 'host', 'wide', 'tv'];
+const problems = [];
+let episode;
+try { episode = JSON.parse(fs.readFileSync(path.join(epDir, 'episode.json'), 'utf8')); } catch (e) { console.error('episode.json is not valid JSON: ' + e.message); process.exit(1); }
+if (!Array.isArray(episode.lines) || !episode.lines.length) problems.push('"lines" must be a list with at least one line');
+(episode.lines || []).forEach((l, i) => {
+  if (!['guest', 'host'].includes(l.who)) problems.push(`line ${i}: "who" must be "guest" or "host"`);
+  if (typeof l.text !== 'string' || !l.text.trim()) problems.push(`line ${i}: "text" is missing`);
+  if (l.shot && !SHOT_NAMES.includes(l.shot)) problems.push(`line ${i}: unknown shot "${l.shot}" (use ${SHOT_NAMES.join(', ')})`);
+  if (l.pop && !(episode.pops || {})[l.pop]) problems.push(`line ${i}: pop-up "${l.pop}" isn't in "pops"`);
+});
+for (const [id, p] of Object.entries(episode.pops || {})) {
+  if (!POP_TYPES.includes(p.type)) problems.push(`pop-up "${id}": unknown type "${p.type}" (use ${POP_TYPES.join(', ')})`);
+  if (p.image && !fs.existsSync(path.join(epDir, p.image))) problems.push(`pop-up "${id}": image ${p.image} isn't in the episode folder`);
+}
+if (problems.length) { console.error('Fix episode.json first:\n  ' + problems.join('\n  ')); process.exit(1); }
 
 console.log('1/5 voices'); if (voicesDir) console.log('  using your recordings in ' + voicesDir); else py('voices.py', projectDir, epDir);
 console.log('2/5 audio'); py('audio.py', projectDir, epDir, ...(voicesDir ? [path.resolve(voicesDir)] : []));
@@ -40,7 +59,8 @@ const THREE_DIR = path.join(ROOT, 'node_modules', 'three');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.woff2': 'font/woff2', '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.svg': 'image/svg+xml' };
 const inside = (base, rel) => { const f = path.resolve(base, '.' + path.sep + rel); return f.startsWith(base + path.sep) || f === base ? f : null; };
 const server = http.createServer((q, res) => {
-  const u = decodeURIComponent(q.url.split('?')[0]);
+  if (q.method !== 'GET' || q.headers.host !== `127.0.0.1:${server.address().port}`) { res.writeHead(403); return res.end(); }
+  let u; try { u = decodeURIComponent(q.url.split('?')[0]); } catch { res.writeHead(400); return res.end(); }
   let f = null;
   if (u.startsWith('/three/')) f = inside(THREE_DIR, u.slice(7));
   else if (u === '/project/project.json') f = path.join(projectDir, 'project.json');
@@ -52,6 +72,7 @@ const server = http.createServer((q, res) => {
 }).listen(0, '127.0.0.1');
 await new Promise((ok) => server.once('listening', ok));
 const port = server.address().port;
+if (process.env.SKIT_DEBUG) console.log('  local server on port ' + port);
 
 const { chromium } = await import('playwright');
 const soft = process.env.SKIT_SOFTWARE_GL === '1';

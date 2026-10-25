@@ -2,6 +2,8 @@
 import json, os, re, subprocess, sys
 from common import load
 
+SETUP = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'setup.mjs')
+
 project_dir, ep_dir = sys.argv[1], sys.argv[2]
 project, episode, build = load(project_dir, ep_dir)
 V = {'engine': 'piper', 'model': 'en_GB-vctk-medium', 'dir': 'voices', 'guest': 'p271', 'host': 'p254',
@@ -11,19 +13,19 @@ pronounce = project.get('pronounce', {})
 def spoken(line):
     text = line.get('say') or line['text']
     for word, sound in pronounce.items():  # brand names the voice gets wrong, e.g. "Divina": "Deevena"
-        text = re.sub(rf'\b{re.escape(word)}\b', sound, text)
+        text = re.sub(rf'\b{re.escape(word)}\b', lambda _: sound, text)
     return text
 
 if V['engine'] == 'piper':
     vdir = os.path.join(project_dir, V['dir'])
     model = os.path.join(vdir, V['model'] + '.onnx')
     if not os.path.exists(model):
-        sys.exit(f'No voice model at {model}. Run "npm run setup" first.')
+        sys.exit(f'No voice model at {model}. Run setup first: node "{SETUP}"')
     speakers = json.load(open(model + '.json', encoding='utf-8')).get('speaker_id_map', {})
     def sid(name):
         if name in speakers: return str(speakers[name])
         if str(name).isdigit(): return str(name)
-        sys.exit(f'Speaker "{name}" is not in {V["model"]}. Run "npm run audition" to hear the options.')
+        sys.exit(f'Speaker "{name}" is not in {V["model"]}. Run the audition script to hear the options.')
     py = os.environ.get('PYTHON', sys.executable)
     for i, line in enumerate(episode['lines']):
         out = os.path.join(build, 'raw', f'l{i:02d}.wav')

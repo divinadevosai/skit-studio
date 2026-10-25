@@ -11,7 +11,7 @@ def load(project_dir, ep_dir):
 def ffmpeg():
     ff = os.environ.get('FFMPEG')
     if not ff:
-        sys.exit('FFMPEG is not set: run this through "npm run make", which finds ffmpeg for you')
+        sys.exit('FFMPEG is not set: run this through scripts/make.mjs, which finds ffmpeg for you')
     return ff
 
 def read_mono(path):
