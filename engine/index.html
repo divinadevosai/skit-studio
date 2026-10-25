@@ -1,0 +1,363 @@
+<!doctype html><meta charset=utf-8>
+<title>Skit Studio</title>
+<style>
+@font-face{font-family:Fr;src:url(fonts/fraunces.woff2)}
+@font-face{font-family:IS;src:url(fonts/instrument-sans.woff2)}
+@font-face{font-family:JB;src:url(fonts/jetbrains-mono.woff2)}
+html,body{margin:0;background:#000;overflow:hidden}canvas{position:absolute;left:0;top:0;width:1080px;height:1920px}
+</style>
+<canvas id=gl></canvas><canvas id=ui width=1080 height=1920></canvas>
+<script type="importmap">{"imports":{"three":"/three/build/three.module.js"}}</script>
+<script type="module">
+// Skit Studio: a two-character explainer skit, rendered one frame at a time.
+// /project/project.json describes the characters, room and product.
+// /ep/timeline.json is the episode (lines, shots, pop-ups) timed to its audio.
+import * as THREE from 'three';
+const W = 1080, H = 1920;
+await Promise.all(['700 34px IS', '600 30px IS', '700 82px Fr', '500 30px JB'].map((f) => document.fonts.load(f)));
+const P = await (await fetch('/project/project.json')).json();
+const TL = await (await fetch('/ep/timeline.json')).json();
+const lines = TL.lines, POPS = TL.pops || {};
+const G = { skin: '#e8b496', hair: '#4a2c1a', hairStyle: 'short', beard: 'none', top: '#2f5a46', bottom: 'trousers', bottomColor: '#2b3a55', tartan: ['#b3202a', '#123a24', '#132050', '#f2c94c'], socks: '#e9e1cf', shoes: '#141010', hat: 'none', hatColor: '#b3202a', glasses: false, ...(P.guest || {}) };
+const HOST = { shadow: '#071133', lit: '#5c94ff', eyes: '#e6f2ff', ...(P.host || {}) };
+const ROOM = { wall: '#22243a', notes: [], mug: ["WORLD'S OKAYEST", 'DEV'], ...(P.room || {}) };
+const PROD = { name: 'PRODUCT', tagline: '', cta: 'Try it free', url: '', accent: '#d9b46a', ...(P.product || {}) };
+const CAP = { host: '#ffd84d', guest: '#ffffff', ...(P.captions || {}) };
+const ACC = PROD.accent;
+
+const r = new THREE.WebGLRenderer({ canvas: document.getElementById('gl'), antialias: true, preserveDrawingBuffer: true });
+r.setPixelRatio(1); r.setSize(W, H, false); r.outputColorSpace = THREE.SRGBColorSpace;
+r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.15;
+r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFShadowMap;
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#0b0d16'); scene.fog = new THREE.Fog('#0b0d16', 4, 9);
+const cam = new THREE.PerspectiveCamera(52, W / H, 0.05, 30);
+const M = (c, o = {}) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.8, flatShading: true, ...o });
+const mesh = (g, m, p = [0, 0, 0], parent = scene) => { const o = new THREE.Mesh(g, m); o.position.set(...p); o.castShadow = o.receiveShadow = true; parent.add(o); return o; };
+const box = (w, h, d, m, p, parent) => mesh(new THREE.BoxGeometry(w, h, d), m, p, parent);
+const ctex = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; };
+let seed = 7; const R = () => (seed = (seed * 16807) % 2147483647) / 2147483647; // the same room every frame and every run
+
+// ---------- lights: one warm pendant over the desk, cool fill, rim from the window ----------
+scene.add(new THREE.HemisphereLight('#5a6aa0', '#2a1c12', 1.1));
+const lamp = new THREE.SpotLight('#ffd9a0', 60, 7, 0.9, 0.5, 1.4); lamp.position.set(0, 2.35, 0.15); lamp.target.position.set(0, 0.75, 0.05);
+lamp.castShadow = true; lamp.shadow.mapSize.set(1024, 1024); lamp.shadow.bias = -0.0004; scene.add(lamp, lamp.target);
+const rim = new THREE.DirectionalLight('#7f9cff', 0.7); rim.position.set(2, 2, -2); scene.add(rim);
+const fill = new THREE.PointLight('#ff9a5a', 1.2, 4); fill.position.set(-1.6, 1.2, 1.2); scene.add(fill);
+
+// ---------- the room ----------
+box(8, 0.1, 6, M('#1a1410'), [0, -0.05, 0]);
+const wallM = M(ROOM.wall, { roughness: 0.95 });
+box(8, 4, 0.1, wallM, [0, 2, -1.5]); box(0.1, 4, 6, wallM, [-2.2, 2, 0]);
+const sky = ctex(512, 512, (x, w, h) => { const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0b1640'); g.addColorStop(1, '#1b1f4a'); x.fillStyle = g; x.fillRect(0, 0, w, h); for (let i = 0; i < 140; i++) { x.fillStyle = `rgba(255,255,255,${R() * 0.9})`; x.fillRect(R() * w, R() * h, 2, 2); } x.fillStyle = '#fff6d8'; x.beginPath(); x.arc(380, 120, 34, 0, 7); x.fill(); });
+mesh(new THREE.PlaneGeometry(1.2, 1.1), new THREE.MeshBasicMaterial({ map: sky }), [1.35, 1.9, -1.44]);
+box(1.3, 0.05, 0.08, M('#3b2d24'), [1.35, 2.47, -1.42]); box(1.3, 0.05, 0.08, M('#3b2d24'), [1.35, 1.33, -1.42]); box(0.05, 1.2, 0.08, M('#3b2d24'), [1.35, 1.9, -1.42]);
+// corkboard: up to five notes, each one or two short lines
+const cork = ctex(1024, 640, (x, w, h) => {
+  x.fillStyle = '#8a6a45'; x.fillRect(0, 0, w, h); for (let i = 0; i < 3000; i++) { x.fillStyle = `rgba(60,40,20,${R() * 0.25})`; x.fillRect(R() * w, R() * h, 3, 3); }
+  const spots = [[170, 170, -0.08, '#f6e58d'], [470, 200, 0.05, '#a8e6cf'], [790, 160, -0.04, '#ffd3b6'], [320, 460, 0.06, '#dcd6f7'], [680, 470, -0.07, '#f6e58d']];
+  ROOM.notes.slice(0, 5).forEach((n, i) => { const [X, Y, rot, col] = spots[i]; const [t1, t2] = Array.isArray(n) ? n : [n, '']; x.save(); x.translate(X, Y); x.rotate(rot); x.fillStyle = col; x.fillRect(-120, -95, 240, 190); x.fillStyle = '#c0392b'; x.beginPath(); x.arc(0, -78, 9, 0, 7); x.fill(); x.fillStyle = '#2b2b2b'; x.textAlign = 'center'; fitFont(x, String(t1).toUpperCase(), 34, 220, 'IS'); x.fillText(String(t1).toUpperCase(), 0, t2 ? -10 : 12); if (t2) { fitFont(x, String(t2).toUpperCase(), 34, 220, 'IS'); x.fillText(String(t2).toUpperCase(), 0, 36); } x.restore(); });
+});
+mesh(new THREE.PlaneGeometry(1.5, 0.94), M('#ffffff', { map: cork, flatShading: false }), [-0.45, 1.95, -1.44]);
+// shelf with a TV and its standby light (the 'tv' shot looks at it)
+box(0.9, 0.04, 0.35, M('#3b2d24'), [-1.6, 1.42, -1.25]);
+const tv = new THREE.Group(); tv.position.set(-1.6, 1.62, -1.22); scene.add(tv);
+box(0.5, 0.36, 0.3, M('#2a2a2e'), [0, 0, 0], tv);
+mesh(new THREE.PlaneGeometry(0.4, 0.28), new THREE.MeshStandardMaterial({ color: '#0d1014', roughness: 0.15, metalness: 0.3 }), [0, 0.01, 0.151], tv);
+const led = mesh(new THREE.SphereGeometry(0.012, 8, 8), new THREE.MeshBasicMaterial({ color: '#ff2a2a' }), [0.19, -0.15, 0.152], tv);
+const ledLight = new THREE.PointLight('#ff2a2a', 0.15, 0.6); ledLight.position.set(0.19, -0.15, 0.2); tv.add(ledLight);
+const tvLight = new THREE.SpotLight('#9fb4ff', 6, 3, 0.5, 0.6, 1.2); tvLight.position.set(-0.9, 2.3, 0.2); tvLight.target = tv; scene.add(tvLight);
+// desk, pendant, mug, laptop
+const wood = M('#6b4a2f'); box(2.1, 0.06, 0.85, wood, [0, 0.75, 0]);
+for (const [x, z] of [[-0.98, -0.36], [0.98, -0.36], [-0.98, 0.36], [0.98, 0.36]]) box(0.06, 0.75, 0.06, M('#3b2d24'), [x, 0.375, z]);
+mesh(new THREE.CylinderGeometry(0.004, 0.004, 1.6), M('#111'), [0, 3.1, 0.15]);
+mesh(new THREE.ConeGeometry(0.26, 0.24, 18, 1, true), M('#1d1d1f', { side: THREE.DoubleSide }), [0, 2.32, 0.15]);
+mesh(new THREE.SphereGeometry(0.06, 12, 12), new THREE.MeshBasicMaterial({ color: '#fff1d0' }), [0, 2.24, 0.15]);
+const mugT = ctex(256, 128, (x, w, h) => { x.fillStyle = '#efe7dc'; x.fillRect(0, 0, w, h); x.fillStyle = '#333'; x.textAlign = 'center'; const [a, b] = ROOM.mug; fitFont(x, a || '', 30, 230, 'IS'); x.fillText(a || '', w / 2, 55); fitFont(x, b || '', 30, 230, 'IS'); x.fillText(b || '', w / 2, 95); });
+mesh(new THREE.CylinderGeometry(0.06, 0.055, 0.13, 16), M('#efe7dc', { map: mugT, flatShading: false }), [-0.18, 0.845, 0.2]);
+box(0.34, 0.015, 0.24, M('#9aa0a8', { metalness: 0.6 }), [-0.62, 0.79, 0.15]);
+const lid = box(0.34, 0.22, 0.012, M('#9aa0a8', { metalness: 0.6 }), [-0.62, 0.9, 0.03]); lid.rotation.x = -0.25;
+
+// ---------- the guest: a low-poly human built from boxes ----------
+const guy = new THREE.Group(); guy.position.set(-0.58, 0, 0.42); scene.add(guy);
+const skin = M(G.skin), topM = M(G.top), hairM = M(G.hair);
+const tartan = ctex(256, 256, (x, w, h) => { const [base, b1, b2, line] = G.tartan; x.fillStyle = base; x.fillRect(0, 0, w, h); x.globalAlpha = 0.55;
+  for (const [c, o, sz] of [[b1, 40, 46], [b2, 150, 30], [b1, 210, 18]]) { x.fillStyle = c; x.fillRect(o, 0, sz, h); x.fillRect(0, o, w, sz); }
+  x.globalAlpha = 0.9; x.fillStyle = line; x.fillRect(118, 0, 4, h); x.fillRect(0, 118, w, 4); x.globalAlpha = 1; });
+tartan.wrapS = tartan.wrapT = THREE.RepeatWrapping; tartan.repeat.set(1.5, 1.5); tartan.magFilter = THREE.NearestFilter;
+const kiltM = new THREE.MeshStandardMaterial({ map: tartan, roughness: 0.9 });
+const torso = box(0.46, 0.55, 0.3, topM, [0, 1.06, 0], guy);
+box(0.2, 0.08, 0.2, topM, [0, 1.36, 0.02], guy);
+const head = new THREE.Group(); head.position.set(0, 1.53, 0.02); guy.add(head);
+const skull = mesh(new THREE.IcosahedronGeometry(0.15, 1), skin, [0, 0, 0], head); skull.scale.set(0.95, 1.12, 1);
+if (G.hairStyle !== 'bald') {
+  if (G.hat !== 'beanie' && G.hat !== 'cap') box(0.29, 0.1, 0.28, hairM, [0, 0.13, -0.01], head); // a beanie or cap covers the top
+  box(0.3, G.hairStyle === 'long' ? 0.36 : 0.16, 0.08, hairM, [0, G.hairStyle === 'long' ? -0.06 : 0.04, -0.12], head);
+  box(0.035, G.hairStyle === 'long' ? 0.3 : 0.12, 0.2, hairM, [-0.15, G.hairStyle === 'long' ? -0.03 : 0.06, -0.03], head);
+  box(0.035, G.hairStyle === 'long' ? 0.3 : 0.12, 0.2, hairM, [0.15, G.hairStyle === 'long' ? -0.03 : 0.06, -0.03], head);
+}
+if (G.hat === 'tam') { mesh(new THREE.CylinderGeometry(0.17, 0.15, 0.05, 10), kiltM, [0.02, 0.2, -0.01], head).rotation.z = -0.12; mesh(new THREE.IcosahedronGeometry(0.035, 0), M(G.hatColor), [0.03, 0.245, -0.01], head); }
+if (G.hat === 'beanie') { const b = mesh(new THREE.SphereGeometry(0.162, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), M(G.hatColor), [0, 0.1, -0.01], head); b.scale.set(1, 0.95, 1); mesh(new THREE.CylinderGeometry(0.166, 0.166, 0.05, 10), M(shade(G.hatColor, -0.06)), [0, 0.105, -0.01], head); }
+if (G.hat === 'cap') { box(0.3, 0.1, 0.3, M(G.hatColor), [0, 0.18, -0.01], head); box(0.24, 0.02, 0.14, M(G.hatColor), [0, 0.14, 0.18], head); }
+if (G.beard === 'big') {
+  box(0.28, 0.12, 0.13, hairM, [0, -0.16, 0.06], head); box(0.2, 0.08, 0.1, hairM, [0, -0.24, 0.07], head);
+  box(0.04, 0.12, 0.12, hairM, [-0.125, -0.07, 0.05], head); box(0.04, 0.12, 0.12, hairM, [0.125, -0.07, 0.05], head);
+}
+if (G.beard === 'short') box(0.26, 0.08, 0.12, hairM, [0, -0.13, 0.07], head);
+if (G.beard === 'big' || G.beard === 'moustache') { box(0.1, 0.03, 0.03, hairM, [-0.045, -0.045, 0.155], head); box(0.1, 0.03, 0.03, hairM, [0.045, -0.045, 0.155], head); }
+box(0.04, 0.05, 0.05, M(G.nose || shade(G.skin, -0.12)), [0, 0, 0.15], head);
+box(0.05, 0.035, 0.01, M('#f4f1ea'), [-0.055, 0.035, 0.139], head); box(0.05, 0.035, 0.01, M('#f4f1ea'), [0.055, 0.035, 0.139], head);
+const eyeM = M('#111'); const eyeL = box(0.022, 0.028, 0.01, eyeM, [-0.05, 0.035, 0.145], head); const eyeR = box(0.022, 0.028, 0.01, eyeM, [0.06, 0.035, 0.145], head);
+if (G.glasses) { const fr = M('#111'); for (const sx of [-0.055, 0.055]) { box(0.075, 0.012, 0.01, fr, [sx, 0.065, 0.152], head); box(0.075, 0.012, 0.01, fr, [sx, 0.005, 0.152], head); box(0.012, 0.06, 0.01, fr, [sx - 0.037, 0.035, 0.152], head); box(0.012, 0.06, 0.01, fr, [sx + 0.037, 0.035, 0.152], head); } box(0.035, 0.01, 0.01, fr, [0, 0.05, 0.152], head); }
+for (const sx of [-1, 1]) box(0.03, 0.06, 0.05, skin, [sx * 0.145, 0.0, 0.0], head);
+box(0.1, 0.1, 0.1, skin, [0, 1.42, 0.02], guy);
+box(0.06, 0.02, 0.015, G.hairStyle === 'bald' && G.beard === 'none' ? M('#3a2a20') : hairM, [-0.055, 0.07, 0.145], head); box(0.06, 0.02, 0.015, G.hairStyle === 'bald' && G.beard === 'none' ? M('#3a2a20') : hairM, [0.055, 0.07, 0.145], head);
+const mouth = box(0.07, 0.02, 0.01, M('#3a1610'), [0, -0.075, 0.135], head);
+for (const s of [-1, 1]) { box(0.1, 0.1, 0.38, topM, [s * 0.2, 0.86, 0.22], guy); box(0.08, 0.06, 0.1, skin, [s * 0.17, 0.8, 0.45], guy); }
+box(0.5, 0.06, 0.45, M('#1c1c22'), [0, 0.7, -0.05], guy); box(0.06, 0.68, 0.06, M('#1c1c22'), [0, 0.34, -0.15], guy); box(0.5, 0.55, 0.06, M('#1c1c22'), [0, 1.05, -0.2], guy);
+if (G.bottom === 'kilt') {
+  box(0.48, 0.14, 0.44, kiltM, [0, 0.8, 0.09], guy);
+  for (let i = 0; i < 6; i++) box(0.075, 0.2, 0.03, kiltM, [-0.2 + i * 0.08, 0.73, 0.31], guy);
+  box(0.12, 0.13, 0.04, M('#5a3a22'), [0, 0.82, 0.32], guy); mesh(new THREE.SphereGeometry(0.018, 8, 8), M('#f1ece0'), [-0.03, 0.8, 0.345], guy); mesh(new THREE.SphereGeometry(0.018, 8, 8), M('#f1ece0'), [0.03, 0.8, 0.345], guy);
+  for (const sx of [-0.12, 0.12]) { box(0.1, 0.1, 0.1, skin, [sx, 0.6, 0.29], guy); box(0.1, 0.4, 0.1, M(G.socks), [sx, 0.32, 0.29], guy); box(0.03, 0.08, 0.005, M(G.tartan[0]), [sx + 0.03, 0.48, 0.342], guy); box(0.12, 0.08, 0.2, M(G.shoes), [sx, 0.04, 0.33], guy); }
+} else {
+  const legM = M(G.bottomColor);
+  box(0.46, 0.14, 0.44, legM, [0, 0.8, 0.09], guy);
+  for (const sx of [-0.12, 0.12]) { box(0.12, 0.62, 0.12, legM, [sx, 0.42, 0.29], guy); box(0.12, 0.08, 0.2, M(G.shoes), [sx, 0.04, 0.33], guy); }
+}
+function shade(hex, k) { const c = new THREE.Color(hex); const hsl = {}; c.getHSL(hsl); c.setHSL(hsl.h, hsl.s, Math.max(0, Math.min(1, hsl.l + k))); return '#' + c.getHexString(); }
+
+// ---------- the host: an AI in human form, a bust of beads ----------
+// A signed-distance bust, sampled once: random seeds walked onto the surface with Newton steps.
+const v3 = (x, y, z) => [x, y, z];
+const len = (a) => Math.hypot(a[0], a[1], a[2]);
+const sdEll = (p, c, r) => { const q = [(p[0] - c[0]) / r[0], (p[1] - c[1]) / r[1], (p[2] - c[2]) / r[2]]; const k0 = len(q); const k1 = len([q[0] / r[0], q[1] / r[1], q[2] / r[2]]); return k0 * (k0 - 1) / Math.max(k1, 1e-6); };
+const sdSeg = (p, a, b) => { const pa = [p[0] - a[0], p[1] - a[1], p[2] - a[2]], ba = [b[0] - a[0], b[1] - a[1], b[2] - a[2]]; const h = Math.min(1, Math.max(0, (pa[0] * ba[0] + pa[1] * ba[1] + pa[2] * ba[2]) / (ba[0] ** 2 + ba[1] ** 2 + ba[2] ** 2))); return [len([pa[0] - ba[0] * h, pa[1] - ba[1] * h, pa[2] - ba[2] * h]), h]; };
+const sdCap = (p, a, b, r) => sdSeg(p, a, b)[0] - r;
+const sdRC = (p, a, b, r1, r2) => { const [d, h] = sdSeg(p, a, b); return d - (r1 + (r2 - r1) * h); };
+const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25; };
+const smax = (a, b, k) => -smin(-a, -b, k);
+function bustSDF(p) {
+  let hd = sdEll(p, v3(0, 1.645, 0), v3(0.077, 0.104, 0.093));
+  hd = smin(hd, sdEll(p, v3(0, 1.674, -0.02), v3(0.08, 0.088, 0.088)), 0.04);
+  hd = smin(hd, sdEll(p, v3(0, 1.58, 0.026), v3(0.055, 0.047, 0.062)), 0.045);
+  hd = smin(hd, sdEll(p, v3(0, 1.627, 0.086), v3(0.014, 0.027, 0.02)), 0.03);
+  let d = smin(hd, sdRC(p, v3(0, 1.40, -0.012), v3(0, 1.575, -0.01), 0.058, 0.047), 0.035);
+  let t = sdEll(p, v3(0, 1.2, -0.005), v3(0.178, 0.25, 0.108));
+  t = smin(t, sdCap(p, v3(-0.16, 1.372, -0.02), v3(0.16, 1.372, -0.02), 0.058), 0.09);
+  t = smin(t, Math.min(sdEll(p, v3(0.192, 1.33, -0.02), v3(0.064, 0.074, 0.06)), sdEll(p, v3(-0.192, 1.33, -0.02), v3(0.064, 0.074, 0.06))), 0.06);
+  t = smin(t, sdCap(p, v3(-0.085, 1.43, -0.035), v3(0.085, 1.43, -0.035), 0.034), 0.07);
+  d = smin(d, t, 0.06);
+  d = smax(d, 1.04 - p[1], 0.03); d = smax(d, Math.abs(p[0]) - 0.25, 0.03);
+  return d;
+}
+const grad = (p) => { const e = 0.0007; const g = [0, 1, 2].map((i) => { const a = p.slice(), b = p.slice(); a[i] += e; b[i] -= e; return (bustSDF(a) - bustSDF(b)) / (2 * e); }); const l = len(g) || 1; return g.map((x) => x / l); };
+const ss = (a, b, v) => { const t = Math.min(1, Math.max(0, (v - a) / (b - a))); return t * t * (3 - 2 * t); };
+const MOUTH_Y = 1.594;
+const pts = [], nrm = [], reg = [], rnd = [];
+for (let i = 0; i < 400000 && pts.length / 3 < 60000; i++) {
+  let p = [-0.27 + R() * 0.54, 1.02 + R() * 0.78, -0.14 + R() * 0.27]; let ok = false;
+  for (let k = 0; k < 12; k++) { const dd = bustSDF(p); if (Math.abs(dd) < 0.0008) { ok = true; break; } const g = grad(p); p = [p[0] - g[0] * dd, p[1] - g[1] * dd, p[2] - g[2] * dd]; }
+  if (!ok || p[1] < 1.05) continue;
+  pts.push(...p); nrm.push(...grad(p));
+  const hw = ss(1.47, 1.56, p[1]);
+  const underChin = p[1] > 1.525 && p[2] > 0.02; const inJaw = p[1] < MOUTH_Y && (p[1] > 1.548 || underChin);
+  const jaw = inJaw ? ss(-0.03, 0.035, p[2]) * (underChin && p[1] < 1.548 ? ss(1.525, 1.545, p[1]) : 1) : 0;
+  reg.push(hw, jaw, 1 - ss(1.3, 1.44, p[1]), 0); rnd.push(R());
+}
+const HS = 1.3; // the bust is life size; the low-poly guest is chunkier, so the host is scaled to match
+const bg = new THREE.BufferGeometry();
+bg.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3)); bg.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
+bg.setAttribute('region', new THREE.Float32BufferAttribute(reg, 4)); bg.setAttribute('rnd', new THREE.Float32BufferAttribute(rnd, 1));
+// bead colours go to the shader as written (the shader's own colour maths expects these numbers)
+const lin = (hex) => new THREE.Color().setHex(parseInt(String(hex).replace('#', ''), 16), THREE.LinearSRGBColorSpace);
+const beadMat = new THREE.ShaderMaterial({
+  uniforms: { uYaw: { value: 0 }, uPitch: { value: 0 }, uRoll: { value: 0 }, uJaw: { value: 0 }, uBreath: { value: 0 }, uPx: { value: H / (2 * Math.tan((52 * Math.PI) / 360)) * HS }, uKey: { value: new THREE.Vector3(0.4, 0.7, 0.6) }, uT: { value: 0 }, uInset: { value: 0 }, uGrow: { value: 1 }, uDim: { value: 1 }, uShadow: { value: lin(HOST.shadow) }, uLit: { value: lin(HOST.lit) } },
+  vertexShader: `
+    attribute vec4 region; attribute float rnd;
+    uniform float uYaw, uPitch, uRoll, uJaw, uBreath, uPx, uT, uInset, uGrow;
+    varying vec3 vN;
+    mat3 rotY(float a){ float c=cos(a), s=sin(a); return mat3(c,0.,-s, 0.,1.,0., s,0.,c); }
+    mat3 rotX(float a){ float c=cos(a), s=sin(a); return mat3(1.,0.,0., 0.,c,s, 0.,-s,c); }
+    mat3 rotZ(float a){ float c=cos(a), s=sin(a); return mat3(c,s,0., -s,c,0., 0.,0.,1.); }
+    void main(){
+      vec3 p = position; vec3 n = normal;
+      vec3 hinge = vec3(0., 1.622, -0.012);
+      mat3 J = rotX(uJaw * region.y); p = hinge + J * (p - hinge); n = J * n;
+      p.xz *= 1.0 + uBreath * region.z * 0.012;
+      vec3 piv = vec3(0., 1.5, -0.01);
+      mat3 Hd = rotY(uYaw * region.x) * rotX(uPitch * region.x) * rotZ(uRoll * region.x);
+      p = piv + Hd * (p - piv); n = Hd * n;
+      p += n * (sin(uT * 1.3 + rnd * 40.) * 0.0006 - uInset);
+      vec4 mv = modelViewMatrix * vec4(p, 1.);
+      vN = normalize(normalMatrix * n);
+      gl_Position = projectionMatrix * mv;
+      gl_PointSize = clamp(0.0062 * uGrow * uPx / max(-mv.z, 0.05), 1.5, 24.);
+    }`,
+  fragmentShader: `
+    uniform vec3 uKey, uShadow, uLit; uniform float uDim; varying vec3 vN;
+    void main(){
+      vec2 c = gl_PointCoord * 2. - 1.; float r2 = dot(c, c); if (r2 > 1.) discard;
+      vec3 bn = vec3(c.x, -c.y, sqrt(1. - r2));
+      vec3 N = normalize(normalize(vN) + bn * 0.22);
+      float diff = clamp(dot(N, normalize(uKey)), 0., 1.);
+      vec3 col = mix(uShadow, uLit, pow(diff, 1.6) * 0.95 + 0.02);
+      col += uLit * 0.6 * pow(clamp(normalize(vN).z, 0., 1.), 12.) * 0.22;
+      col *= 0.74 + 0.26 * bn.z;
+      gl_FragColor = vec4(col * uDim, 1.);
+      #include <colorspace_fragment>
+    }`,
+});
+const bot = new THREE.Group(); bot.scale.setScalar(HS); bot.position.set(0.52, -0.5, 0.1); scene.add(bot); // floats over the desk
+const beads = new THREE.Points(bg, beadMat); beads.frustumCulled = false; bot.add(beads);
+// a backing layer of bigger, darker beads under the skin, so thin patches never show through
+const fillMat = beadMat.clone(); fillMat.uniforms = { ...beadMat.uniforms, uInset: { value: 0.0035 }, uGrow: { value: 1.9 }, uDim: { value: 0.62 } };
+const fillBeads = new THREE.Points(bg, fillMat); fillBeads.frustumCulled = false; bot.add(fillBeads);
+const eyeCol = new THREE.Color(HOST.eyes);
+const glowTex = ctex(64, 64, (x, w, h) => { const g = x.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.3, 'rgba(255,255,255,.75)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, w, h); });
+const glow = (o = {}) => new THREE.SpriteMaterial({ map: glowTex, color: eyeCol, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, ...o });
+const eyeMatD = glow({ depthTest: false });
+const eyesD = [new THREE.Sprite(eyeMatD), new THREE.Sprite(eyeMatD)]; eyesD.forEach((e) => bot.add(e));
+const seam = new THREE.Sprite(glow({ depthTest: false })); bot.add(seam);
+const base = new THREE.Sprite(glow({ opacity: 0.5, color: new THREE.Color(HOST.lit) })); base.scale.set(0.7, 0.12, 1); base.position.set(0, 1.04, 0); bot.add(base);
+const botGlow = new THREE.PointLight(HOST.lit, 1.4, 1.8); botGlow.position.set(0, 1.45, 0.3); bot.add(botGlow);
+const _q = new THREE.Vector3(), _piv = new THREE.Vector3(0, 1.5, -0.01), _e = new THREE.Euler();
+const headPoint = (local, out, yaw, pitch, roll) => { _e.set(pitch, yaw, roll, 'YXZ'); return out.set(...local).sub(_piv).applyEuler(_e).add(_piv); };
+function poseHost(t, talk, smug, yaw) {
+  const pitch = Math.sin(t * 0.9) * 0.03 + talk * 0.05 * Math.sin(t * 7) + (smug ? -0.1 : 0.04);
+  const roll = smug ? 0.13 : Math.sin(t * 0.7) * 0.02;
+  const jaw = Math.min(1, talk * 1.3) * 0.2;
+  const u = beadMat.uniforms; u.uYaw.value = yaw; u.uPitch.value = pitch; u.uRoll.value = roll; u.uJaw.value = jaw; u.uBreath.value = Math.sin(t * 1.4); u.uT.value = t;
+  headPoint([-0.031, 1.655, 0.088], eyesD[0].position, yaw, pitch, roll); headPoint([0.031, 1.655, 0.088], eyesD[1].position, yaw, pitch, roll);
+  const blink = (t % 4.1) < 0.1 ? 0.2 : 1; eyesD.forEach((e) => e.scale.set(0.03, (smug ? 0.012 : 0.026) * blink, 1));
+  headPoint([0, MOUTH_Y - jaw * 0.03, 0.07], seam.position, yaw, pitch, roll);
+  seam.scale.set(0.05, 0.006 + talk * 0.02, 1); seam.material.opacity = 0.25 + talk * 0.75;
+  bot.position.y = -0.5 + Math.sin(t * 1.7) * 0.012;
+  botGlow.intensity = 1.2 + talk * 2.2;
+  _q.set(0.35, 1.0, 0.8).normalize().transformDirection(cam.matrixWorldInverse); u.uKey.value.copy(_q);
+}
+
+// ---------- timing ----------
+const lerp = (a, b, k) => a + (b - a) * k; const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+const ease = (k) => 1 - Math.pow(1 - clamp(k), 3);
+function envAt(who, t) { for (const l of lines) if (l.who === who && t >= l.start && t < l.start + l.dur) { const i = Math.floor((t - l.start) * TL.fps); return l.env[Math.min(i, l.env.length - 1)] || 0; } return 0; }
+function lineAt(t) { let cur = null; for (const l of lines) if (t >= l.start - 0.12) cur = l; return cur; }
+const SHOTS = {
+  wide: { p: [0.0, 1.6, 3.9], l: [0, 1.2, 0.25] },
+  guest: { p: [0.2, 1.55, 2.25], l: [-0.52, 1.32, 0.42] },
+  host: { p: [-0.15, 1.62, 2.15], l: [0.5, 1.6, 0.1] },
+  tv: { p: [-0.95, 1.62, 1.0], l: [-1.6, 1.58, -1.22] },
+  end: { p: [0.1, 1.6, 2.6], l: [0.48, 1.5, 0.1] },
+};
+const tmp = new THREE.Vector3(), tmpL = new THREE.Vector3();
+let hostYaw = -0.4, dockV = 0;
+
+// ---------- the 2D layer: captions and pop-ups ----------
+const ui = document.getElementById('ui').getContext('2d');
+const images = {};
+for (const pop of Object.values(POPS)) if (pop.image && !images[pop.image]) { const im = new Image(); im.src = '/ep/' + pop.image; await im.decode().catch(() => { console.warn('missing image ' + pop.image); }); images[pop.image] = im; }
+function fitFont(ctx, txt, size, maxW, font, weight = 700) { let s = size; do { ctx.font = `${weight} ${s}px ${font}`; s -= 2; } while (ctx.measureText(txt).width > maxW && s > 10); }
+function card(x, y, w, h, a) { ui.save(); ui.globalAlpha = a; ui.shadowColor = 'rgba(0,0,0,.5)'; ui.shadowBlur = 40; ui.fillStyle = 'rgba(14,18,34,.92)'; ui.beginPath(); ui.roundRect(x, y, w, h, 34); ui.fill(); ui.shadowBlur = 0; ui.strokeStyle = 'rgba(143,184,255,.35)'; ui.lineWidth = 2; ui.stroke(); ui.restore(); }
+function label(txt, x, y, size, col, font = 'IS', weight = 700, align = 'left', a = 1, maxW = 800) { if (!txt) return; ui.save(); ui.globalAlpha = a; fitFont(ui, String(txt), size, maxW, font, weight); ui.fillStyle = col; ui.textAlign = align; ui.fillText(String(txt), x, y); ui.restore(); }
+function pill(x, y, w, h, col, a) { ui.save(); ui.globalAlpha = a; ui.fillStyle = col; ui.beginPath(); ui.roundRect(x, y, w, h, h / 2); ui.fill(); ui.restore(); }
+const MARK = { check: ['#3cffb4', '✓'], cross: ['#ff6b6b', '✕'], dot: [ACC, '•'] };
+
+// Pop-up types. Every text field is optional; long text shrinks to fit.
+function popup(pop, k, t) {
+  const a = ease(k * 3) * (1 - clamp((k - 0.92) / 0.08));
+  ui.save(); ui.translate(0, (1 - ease(k * 3)) * -60);
+  // shrink into the top-right corner whenever the camera isn't on the host
+  if (pop.type !== 'end' && dockV > 0.001) { const sc = 1 - 0.6 * dockV; ui.translate(lerp(990, 1045, dockV), lerp(150, 70, dockV)); ui.scale(sc, sc); ui.translate(-990, -150); }
+  const T = pop.type;
+  if (T === 'image') {
+    card(90, 150, 900, 680, a); const im = images[pop.image];
+    if (im && im.naturalWidth) { ui.save(); ui.globalAlpha = a; ui.beginPath(); ui.roundRect(120, 240, 840, 525, 20); ui.clip(); const s = Math.max(840 / im.naturalWidth, 525 / im.naturalHeight); ui.drawImage(im, 540 - im.naturalWidth * s / 2, 502 - im.naturalHeight * s / 2, im.naturalWidth * s, im.naturalHeight * s); ui.restore(); }
+    label(pop.title, 125, 210, 32, ACC, 'JB', 600, 'left', a, 830);
+    if (pop.button) { const kk = ease((k - 0.35) * 4); pill(640, 780 - kk * 10, 300, 70, ACC, a * kk); label(pop.button, 790, 828 - kk * 10, 36, '#14100a', 'IS', 700, 'center', a * kk, 260); }
+  } else if (T === 'list') {
+    const items = (pop.items || []).slice(0, 4); const h = 200 + items.length * 120; card(90, 170, 900, h, a);
+    label(pop.title, 140, 262, 46, '#fff', 'IS', 700, 'left', a); label(pop.subtitle, 140, 312, 30, '#8fb8ff', 'IS', 600, 'left', a);
+    items.forEach((it, i) => { const kk = ease((k - 0.12 - i * 0.14) * 4); if (kk <= 0) return; const y = (pop.subtitle ? 345 : 300) + i * 120; const [mc, mt] = MARK[it.mark || 'check'] || MARK.check;
+      pill(140, y, 800, 100, '#1b2240', a * kk); ui.save(); ui.globalAlpha = a * kk; ui.fillStyle = mc; ui.beginPath(); ui.arc(195, y + 50, 24, 0, 7); ui.fill(); ui.restore();
+      label(mt, 195, y + 62, 32, '#06120c', 'IS', 700, 'center', a * kk); const off = it.mark === 'cross';
+      label(it.text, 245, y + (it.note ? 45 : 62), 36, off ? '#8794a8' : '#e6edf6', 'IS', 700, 'left', a * kk, 670); label(it.note, 245, y + 84, 26, off ? '#ff9a9a' : '#8794a8', 'JB', 500, 'left', a * kk, 670);
+      if (off && k > 0.7) { ui.save(); ui.globalAlpha = a; ui.strokeStyle = '#ff6b6b'; ui.lineWidth = 5; ui.beginPath(); ui.moveTo(245, y + 33); ui.lineTo(245 + 240 * ease((k - 0.7) * 5), y + 33); ui.stroke(); ui.restore(); } });
+  } else if (T === 'tiles') {
+    const items = (pop.items || []).slice(0, 3); card(90, 170, 900, 520, a);
+    label(pop.title, 140, 262, 46, '#fff', 'IS', 700, 'left', a); label(pop.subtitle, 140, 312, 30, '#8fb8ff', 'IS', 600, 'left', a);
+    const w = 800 / items.length - 20;
+    items.forEach((it, i) => { const kk = ease((k - 0.12 - i * 0.12) * 4); if (kk <= 0) return; const x = 150 + i * (w + 20), dy = (1 - kk) * 40;
+      ui.save(); ui.globalAlpha = a * kk; ui.translate(0, dy); ui.fillStyle = '#1b2240'; ui.beginPath(); ui.roundRect(x, 360, w, 220, 22); ui.fill(); ui.strokeStyle = 'rgba(143,184,255,.4)'; ui.lineWidth = 2; ui.stroke(); ui.fillStyle = ACC; ui.beginPath(); ui.roundRect(x, 360, w, 10, 5); ui.fill(); ui.restore();
+      label(it.title, x + w / 2, 440 + dy, 32, '#fff', 'IS', 700, 'center', a * kk, w - 30); (it.lines || []).slice(0, 3).forEach((s, j) => label(s, x + w / 2, 485 + j * 34 + dy, 24, '#8794a8', 'IS', 600, 'center', a * kk, w - 30)); });
+    if (pop.footer) label(pop.footer, 540, 640, 38, '#3cffb4', 'IS', 700, 'center', a * ease((k - 0.5) * 4));
+  } else if (T === 'terminal') {
+    const chips = (pop.chips || []).slice(0, 5); card(90, 170, 900, chips.length ? 560 : 440, a);
+    label(pop.kicker, 140, 250, 28, '#3cffb4', 'JB', 600, 'left', a); label(pop.title, 140, 315, 50, '#fff', 'IS', 700, 'left', a); label(pop.subtitle, 140, 365, 30, '#8794a8', 'IS', 500, 'left', a);
+    ui.save(); ui.globalAlpha = a; ui.fillStyle = '#05070d'; ui.beginPath(); ui.roundRect(140, 400, 800, 90, 18); ui.fill(); ui.restore();
+    label(pop.command ? '$ ' + pop.command : '', 170, 457, 30, '#cfe0ff', 'JB', 500, 'left', a, 750);
+    let x = 140; chips.forEach((n, i) => { const kk = ease((k - 0.25 - i * 0.07) * 4); ui.save(); ui.font = '600 28px IS'; const w = Math.min(ui.measureText(n).width + 40, 940 - x); ui.restore(); if (kk > 0 && w > 60) { pill(x, 530, w, 60, i === chips.length - 1 && pop.lastAccent ? ACC : '#1b2a6b', a * kk); label(n, x + 20, 570, 28, i === chips.length - 1 && pop.lastAccent ? '#14100a' : '#e6edf6', 'IS', 600, 'left', a * kk, w - 40); } x += w + 14; });
+  } else if (T === 'button') {
+    card(90, 170, 900, 520, a); label(pop.kicker, 140, 250, 30, ACC, 'JB', 700, 'left', a);
+    label(pop.title, 140, 320, 44, '#fff', 'IS', 700, 'left', a); label(pop.subtitle, 140, 370, 30, '#8794a8', 'IS', 500, 'left', a);
+    const press = k > 0.45 && k < 0.55 ? 0.94 : 1; ui.save(); ui.globalAlpha = a; ui.translate(540, 520); ui.scale(press, press); ui.fillStyle = ACC; ui.beginPath(); ui.roundRect(-250, -55, 500, 110, 55); ui.fill(); ui.restore();
+    label(pop.button, 540, 537, 48, '#14100a', 'IS', 700, 'center', a, 460);
+    if (pop.after && k > 0.55) label(pop.after, 540, 640, 30, '#cfe0ff', 'JB', 500, 'center', a * ease((k - 0.55) * 5));
+  } else if (T === 'form') {
+    ui.translate(540, 110); ui.scale(0.9, 0.9); ui.translate(-540, -110);
+    const fields = (pop.fields || []).slice(0, 3); card(90, 150, 900, 700, a);
+    label(pop.title, 140, 235, 44, '#fff', 'IS', 700, 'left', a); label(pop.subtitle, 140, 280, 28, '#8794a8', 'IS', 500, 'left', a);
+    fields.forEach(([lab, val], i) => { const kk = ease((k - 0.1 - i * 0.1) * 4); if (kk <= 0) return; const y = 320 + i * 120; label(lab, 140, y + 30, 28, '#cfe0ff', 'IS', 600, 'left', a * kk); ui.save(); ui.globalAlpha = a * kk; ui.fillStyle = '#05070d'; ui.strokeStyle = ACC; ui.lineWidth = 2; ui.beginPath(); ui.roundRect(140, y + 45, 800, 62, 14); ui.fill(); ui.stroke(); ui.restore(); label(val, 165, y + 87, 28, '#e6edf6', 'JB', 500, 'left', a * kk, 750); });
+    const kk = ease((k - 0.45) * 4);
+    if (pop.check) { pill(140, 690, 44, 44, ACC, a * kk); label('✓', 162, 723, 32, '#14100a', 'IS', 700, 'center', a * kk); label(pop.check, 205, 722, 28, '#e6edf6', 'IS', 600, 'left', a * kk, 470); }
+    if (pop.button) { pill(700, 680, 240, 64, '#3cffb4', a * kk); label(pop.button, 820, 723, 32, '#03140d', 'IS', 700, 'center', a * kk, 210); }
+  } else if (T === 'end') {
+    const e = ease(k * 2.5), name = pop.name || PROD.name;
+    ui.save(); ui.globalAlpha = e * 0.85; ui.fillStyle = '#05070d'; ui.fillRect(0, 0, W, H); ui.restore();
+    label(name, 540, 740, 150, ACC, 'IS', 700, 'center', e, 960);
+    label(pop.tagline || PROD.tagline, 540, 840, 50, '#f1ebe0', 'Fr', 600, 'center', e, 960);
+    pill(230, 930, 620, 110, ACC, e); label(pop.cta || PROD.cta, 540, 1004, 50, '#14100a', 'IS', 700, 'center', e, 560);
+    label(pop.url || PROD.url, 540, 1140, 60, '#ffd84d', 'JB', 700, 'center', e, 960);
+    label(pop.footnote || PROD.footnote, 540, 1230, 34, '#8fb8ff', 'IS', 600, 'center', e, 960);
+  }
+  ui.restore();
+}
+function caption(l, t) {
+  const words = (l.caption || l.text).split(' '); const per = 4; const chunks = []; for (let i = 0; i < words.length; i += per) chunks.push(words.slice(i, i + per).join(' '));
+  const totalChars = (l.caption || l.text).length; let acc = 0, idx = 0; const p = (t - l.start) / l.dur;
+  for (let i = 0; i < chunks.length; i++) { const share = (chunks[i].length + 1) / (totalChars + 1); if (p < acc + share) { idx = i; break; } acc += share; idx = i; }
+  const s = chunks[idx]; ui.save(); fitFont(ui, s, 82, 980, 'Fr'); ui.textAlign = 'center'; ui.lineJoin = 'round';
+  ui.lineWidth = 14; ui.strokeStyle = 'rgba(10,6,2,.85)'; ui.strokeText(s, 540, 1500); ui.fillStyle = l.who === 'host' ? CAP.host : CAP.guest; ui.fillText(s, 540, 1500); ui.restore();
+}
+
+// ---------- one frame ----------
+const lastEnd = lines.at(-1).start + lines.at(-1).dur + 0.3;
+window.renderAt = (t) => {
+  const l = lineAt(t) || lines[0];
+  const shotName = t > lastEnd ? 'end' : (l.shot || 'wide');
+  const S = SHOTS[shotName] || SHOTS.wide; const shotStart = shotName === 'end' ? lastEnd : l.start - 0.12;
+  const k = clamp((t - shotStart) / 4);
+  dockV = lerp(dockV, shotName === 'host' ? 0 : 1, 0.2);
+  tmp.set(...S.p); tmpL.set(...S.l); tmp.lerp(tmpL, 0.06 * k); // slow push-in
+  tmp.x += Math.sin(t * 0.6) * 0.01; tmp.y += Math.sin(t * 0.8) * 0.006;
+  cam.position.copy(tmp); cam.lookAt(tmpL); cam.updateMatrixWorld();
+  const gTalk = envAt('guest', t), hTalk = envAt('host', t);
+  mouth.scale.y = 1 + gTalk * 4.5; mouth.position.y = -0.075 - gTalk * 0.02;
+  eyeL.scale.y = eyeR.scale.y = (t % 4.3) < 0.12 ? 0.2 : 1;
+  const tvLook = l.shot === 'tv' && t > l.start + 0.1;
+  head.rotation.y = lerp(head.rotation.y, tvLook ? -1.9 : (l.who === 'host' ? 0.95 : 0.45), 0.15);
+  head.rotation.x = Math.sin(t * 1.3) * 0.03 + gTalk * 0.08 * Math.sin(t * 9);
+  torso.position.y = 1.06 + Math.sin(t * 1.6) * 0.004;
+  const lookAtGuest = l.who === 'guest' || shotName === 'guest';
+  hostYaw = lerp(hostYaw, shotName === 'end' ? -0.2 : lookAtGuest ? -0.75 : -0.4, 0.12);
+  poseHost(t, hTalk, !!l.smug && l.who === 'host' && t > l.start + l.dur * 0.6, hostYaw);
+  const ledOn = l.shot === 'tv' ? ((t * 2.2) % 1) < 0.5 : true; led.material.color.set(ledOn ? '#ff2a2a' : '#300'); ledLight.intensity = ledOn ? 0.25 : 0;
+  r.render(scene, cam);
+  ui.clearRect(0, 0, W, H);
+  lines.forEach((x, i) => { if (!x.pop || !POPS[x.pop]) return; const pop = POPS[x.pop]; const end = pop.type === 'end' ? TL.total + 1 : (lines[i + 2] || lines.at(-1)).start; if (t >= x.start && t < end) popup(pop, (t - x.start) / (end - x.start), t); });
+  for (const x of lines) if (t >= x.start && t < x.start + x.dur) caption(x, t);
+};
+// one finished frame as a JPEG: the 3D canvas with the 2D layer on top
+const out = document.createElement('canvas'); out.width = W; out.height = H; const oc = out.getContext('2d');
+window.frameAt = (t) => { window.renderAt(t); oc.drawImage(document.getElementById('gl'), 0, 0); oc.drawImage(document.getElementById('ui'), 0, 0); return out.toDataURL('image/jpeg', 0.9).slice(23); };
+await document.fonts.ready;
+window.__ready = true;
+</script>

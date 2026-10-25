@@ -1,0 +1,7 @@
+node_modules/
+**/build/
+**/voices/
+**/auditions/
+**/video.mp4
+**/preview-*.jpg
+__pycache__/

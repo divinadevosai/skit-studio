@@ -1,0 +1,96 @@
+{
+  "product": {
+    "name": "OBSTAT",
+    "tagline": "AI apps from GitHub. No terminal.",
+    "cta": "Free for Windows",
+    "url": "obstat.app",
+    "accent": "#d9b46a",
+    "footnote": "also from me: Divina · divinaos.site",
+    "docs": [
+      "https://obstat.app",
+      "https://github.com/divinadevosai/obstat-desktop"
+    ]
+  },
+  "host": {
+    "name": "Divina",
+    "personality": "Smug, impatient, very clever. Roasts the guest, then explains properly.",
+    "shadow": "#071133",
+    "lit": "#5c94ff",
+    "eyes": "#e6f2ff"
+  },
+  "guest": {
+    "name": "the Scotsman",
+    "personality": "Friendly, confused, asks the questions real people ask. Says 'aye'.",
+    "skin": "#e8b496",
+    "hair": "#ff8c3a",
+    "hairStyle": "short",
+    "beard": "big",
+    "top": "#2c3a63",
+    "bottom": "kilt",
+    "tartan": [
+      "#b3202a",
+      "#123a24",
+      "#132050",
+      "#f2c94c"
+    ],
+    "socks": "#e9e1cf",
+    "shoes": "#141010",
+    "hat": "tam",
+    "hatColor": "#b3202a"
+  },
+  "room": {
+    "wall": "#22243a",
+    "notes": [
+      [
+        "WHO'S",
+        "LISTENING?"
+      ],
+      [
+        "OPEN YOUR",
+        "MIND"
+      ],
+      [
+        "NO",
+        "TRACKERS"
+      ],
+      [
+        "YOUR OWN",
+        "AI KEY"
+      ],
+      [
+        "CHECK THE",
+        "HOTEL TV"
+      ]
+    ],
+    "mug": [
+      "WORLD'S OKAYEST",
+      "DEV"
+    ]
+  },
+  "voices": {
+    "engine": "piper",
+    "model": "en_GB-vctk-medium",
+    "guest": "p271",
+    "host": "p254"
+  },
+  "pronounce": {
+    "Divina": "Deevena",
+    "Vercel": "Versell",
+    "AI": "A.I.",
+    "UI": "U.I."
+  },
+  "hostEffect": "ai",
+  "captions": {
+    "host": "#ffd84d",
+    "guest": "#ffffff"
+  },
+  "credit": "Voices: Piper TTS, VCTK corpus (CC BY 4.0)",
+  "handles": {
+    "tiktok": "",
+    "instagram": "",
+    "youtube": ""
+  },
+  "style": {
+    "emoji": false
+  }
+}

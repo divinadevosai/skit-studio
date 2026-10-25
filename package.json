@@ -1,0 +1,19 @@
+{
+  "name": "skit-studio",
+  "version": "1.0.0",
+  "description": "A Claude Code skill that writes, voices and renders two-character explainer skits for your product, with TikTok, Instagram and YouTube captions.",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "audition": "node scripts/py.mjs audition.py",
+    "make": "node scripts/make.mjs"
+  },
+  "dependencies": {
+    "ffmpeg-static": "5.3.0",
+    "playwright": "1.64.1",
+    "three": "0.186.1"
+  },
+  "engines": { "node": ">=20" }
+}

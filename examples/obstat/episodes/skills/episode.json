@@ -1,0 +1,170 @@
+{
+ "title": "What are AI skills?",
+ "lines": [
+  {
+   "who": "guest",
+   "text": "Divina, my whole feed is going mad about skills. What even is that?",
+   "shot": "guest"
+  },
+  {
+   "who": "host",
+   "text": "A skill is a little instruction pack that teaches an AI agent to do one job properly. Review code, design a page, write tests.",
+   "shot": "host",
+   "pop": "skills"
+  },
+  {
+   "who": "guest",
+   "text": "So a cheat sheet for robots?",
+   "shot": "guest"
+  },
+  {
+   "who": "host",
+   "text": "For once, yes. And Vercel's skills tool is blowing up on GitHub. One command puts them into Claude Code, Codex, Cursor and seventy five more.",
+   "shot": "host",
+   "pop": "repo",
+   "smug": true
+  },
+  {
+   "who": "guest",
+   "text": "Aye, but that's a command again.",
+   "shot": "wide"
+  },
+  {
+   "who": "host",
+   "text": "Which is why people like you have Obstat. Paste the repo in, then press Build a UI.",
+   "shot": "host",
+   "pop": "buildui",
+   "smug": true
+  },
+  {
+   "who": "guest",
+   "text": "Build a what now?",
+   "shot": "guest"
+  },
+  {
+   "who": "host",
+   "text": "If an app is only a command line tool, Obstat turns its options into a proper screen. Boxes, buttons, no terminal.",
+   "shot": "host",
+   "pop": "form"
+  },
+  {
+   "who": "guest",
+   "text": "And if I want it fancy?",
+   "shot": "guest"
+  },
+  {
+   "who": "host",
+   "text": "Ask Claude Code, Codex or Gemini to build you a custom one. Obstat hands them the job.",
+   "shot": "host",
+   "pop": "agents"
+  },
+  {
+   "who": "guest",
+   "text": "You're actually quite helpful.",
+   "shot": "wide"
+  },
+  {
+   "who": "host",
+   "text": "I know. Obstat. Free for Windows.",
+   "shot": "wide",
+   "pop": "end",
+   "smug": true
+  }
+ ],
+ "pops": {
+  "skills": {
+   "type": "list",
+   "title": "What is a skill?",
+   "subtitle": "instructions that teach an AI agent one job",
+   "items": [
+    {
+     "text": "review-code",
+     "note": "SKILL.md",
+     "mark": "dot"
+    },
+    {
+     "text": "design-a-page",
+     "note": "SKILL.md",
+     "mark": "dot"
+    },
+    {
+     "text": "write-tests",
+     "note": "SKILL.md",
+     "mark": "dot"
+    }
+   ]
+  },
+  "repo": {
+   "type": "terminal",
+   "kicker": "trending on GitHub",
+   "title": "vercel-labs / skills",
+   "subtitle": "The CLI for the open agent skills ecosystem",
+   "command": "npx skills add vercel-labs/agent-skills",
+   "chips": [
+    "OpenCode",
+    "Claude Code",
+    "Codex",
+    "Cursor",
+    "+75 more"
+   ],
+   "lastAccent": true
+  },
+  "buildui": {
+   "type": "button",
+   "kicker": "OBSTAT",
+   "title": "vercel-labs/skills",
+   "subtitle": "installed · command-line tool, no screen",
+   "button": "Build a UI",
+   "after": "reading --help …"
+  },
+  "form": {
+   "type": "form",
+   "title": "skills",
+   "subtitle": "a screen made from its options",
+   "fields": [
+    [
+     "Source",
+     "vercel-labs/agent-skills"
+    ],
+    [
+     "Skill",
+     "web-design-guidelines"
+    ],
+    [
+     "Agent",
+     "claude-code  ▾"
+    ]
+   ],
+   "check": "Install for all projects",
+   "button": "Run"
+  },
+  "agents": {
+   "type": "tiles",
+   "title": "Want a custom UI?",
+   "subtitle": "Obstat hands the job to your AI agent",
+   "items": [
+    {
+     "title": "Claude Code",
+     "lines": [
+      "building UI…"
+     ]
+    },
+    {
+     "title": "Codex",
+     "lines": [
+      "building UI…"
+     ]
+    },
+    {
+     "title": "Gemini CLI",
+     "lines": [
+      "building UI…"
+     ]
+    }
+   ]
+  },
+  "end": {
+   "type": "end"
+  }
+ }
+}
