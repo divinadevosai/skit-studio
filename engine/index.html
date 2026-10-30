@@ -28,7 +28,7 @@ const ACC = PROD.accent;
 
 const r = new THREE.WebGLRenderer({ canvas: document.getElementById('gl'), antialias: true, preserveDrawingBuffer: true });
 r.setPixelRatio(1); r.setSize(W, H, false); r.outputColorSpace = THREE.SRGBColorSpace;
-r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.4;
+r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.26;
 r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFShadowMap;
 const scene = new THREE.Scene(); scene.background = new THREE.Color('#0b0d16'); scene.fog = new THREE.Fog('#0b0d16', 4, 9);
 const cam = new THREE.PerspectiveCamera(52, W / H, 0.05, 30);
@@ -89,8 +89,8 @@ const tartan = ctex(256, 256, (x, w, h) => { const [base, b1, b2, line] = G.tart
 tartan.wrapS = tartan.wrapT = THREE.RepeatWrapping; tartan.repeat.set(1.5, 1.5); tartan.magFilter = THREE.NearestFilter;
 const kiltM = new THREE.MeshStandardMaterial({ map: tartan, roughness: 0.9 });
 const torso = box(0.46, 0.55, 0.3, topM, [0, 1.06, 0], guy);
-box(0.16, 0.05, 0.16, topM, [0, 1.345, 0.0], guy);
-const head = new THREE.Group(); head.position.set(0, 1.53, 0.02); guy.add(head);
+box(0.16, 0.04, 0.16, topM, [0, 1.335, 0.0], guy);
+const head = new THREE.Group(); head.position.set(0, 1.58, 0.02); guy.add(head);
 const skull = mesh(new THREE.IcosahedronGeometry(0.15, 1), skin, [0, 0, 0], head); skull.scale.set(0.95, 1.12, 1);
 if (G.hairStyle !== 'bald') {
   if (G.hat !== 'beanie' && G.hat !== 'cap') box(0.29, 0.1, 0.28, hairM, [0, 0.13, -0.01], head); // a beanie or cap covers the top
@@ -103,7 +103,7 @@ if (G.hat === 'beanie') { const b = mesh(new THREE.SphereGeometry(0.162, 10, 6, 
 if (G.hat === 'cap') { box(0.3, 0.1, 0.3, M(G.hatColor), [0, 0.18, -0.01], head); box(0.24, 0.02, 0.14, M(G.hatColor), [0, 0.14, 0.18], head); }
 if (G.beard === 'big') {
   // kept above the collar and slightly forward, so turning the head never sweeps the beard through the body
-  box(0.28, 0.1, 0.12, hairM, [0, -0.14, 0.08], head); box(0.2, 0.05, 0.09, hairM, [0, -0.205, 0.1], head);
+  box(0.28, 0.1, 0.12, hairM, [0, -0.135, 0.08], head); box(0.2, 0.04, 0.09, hairM, [0, -0.17, 0.1], head);
   box(0.04, 0.12, 0.12, hairM, [-0.125, -0.07, 0.05], head); box(0.04, 0.12, 0.12, hairM, [0.125, -0.07, 0.05], head);
 }
 if (G.beard === 'short') box(0.26, 0.08, 0.12, hairM, [0, -0.13, 0.07], head);
@@ -113,7 +113,7 @@ box(0.05, 0.035, 0.01, M('#f4f1ea'), [-0.055, 0.035, 0.139], head); box(0.05, 0.
 const eyeM = M('#111'); const eyeL = box(0.022, 0.028, 0.01, eyeM, [-0.05, 0.035, 0.145], head); const eyeR = box(0.022, 0.028, 0.01, eyeM, [0.06, 0.035, 0.145], head);
 if (G.glasses) { const fr = M('#111'); for (const sx of [-0.055, 0.055]) { box(0.075, 0.012, 0.01, fr, [sx, 0.065, 0.152], head); box(0.075, 0.012, 0.01, fr, [sx, 0.005, 0.152], head); box(0.012, 0.06, 0.01, fr, [sx - 0.037, 0.035, 0.152], head); box(0.012, 0.06, 0.01, fr, [sx + 0.037, 0.035, 0.152], head); } box(0.035, 0.01, 0.01, fr, [0, 0.05, 0.152], head); }
 for (const sx of [-1, 1]) box(0.03, 0.06, 0.05, skin, [sx * 0.145, 0.0, 0.0], head);
-box(0.1, 0.1, 0.1, skin, [0, 1.42, 0.02], guy);
+box(0.1, 0.14, 0.1, skin, [0, 1.44, 0.02], guy);
 box(0.06, 0.02, 0.015, G.hairStyle === 'bald' && G.beard === 'none' ? M('#3a2a20') : hairM, [-0.055, 0.07, 0.145], head); box(0.06, 0.02, 0.015, G.hairStyle === 'bald' && G.beard === 'none' ? M('#3a2a20') : hairM, [0.055, 0.07, 0.145], head);
 const mouth = box(0.07, 0.02, 0.01, M('#3a1610'), [0, -0.075, 0.135], head);
 for (const s of [-1, 1]) { box(0.1, 0.1, 0.38, topM, [s * 0.2, 0.86, 0.22], guy); box(0.08, 0.06, 0.1, skin, [s * 0.17, 0.8, 0.45], guy); }

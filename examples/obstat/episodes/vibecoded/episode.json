@@ -25,10 +25,10 @@
     { "who": "guest", "text": "It was vibe coded. Took me ten minutes.", "shot": "guest" },
     { "who": "host", "text": "It shows. Half the internet looks exactly like this now.", "shot": "wide" },
     { "who": "guest", "text": "So how do I make it look like a real one?", "shot": "guest" },
-    { "who": "host", "text": "You ask someone who builds them properly. SWE3WE makes websites, apps and software that don't look like everyone else's.", "say": "You ask someone who builds them properly. Swee three wee makes websites, apps and software that don't look like everyone else's.", "shot": "host", "pop": "builds" },
+    { "who": "host", "text": "You ask someone who builds them properly. SWE3WE makes websites, apps and software that don't look like everyone else's.", "say": "You ask someone who builds them properly. Swee swee makes websites, apps and software that don't look like everyone else's.", "shot": "host", "pop": "builds" },
     { "who": "guest", "text": "Could they do my app idea as well?", "shot": "guest" },
     { "who": "host", "text": "Websites, apps, AI tools, the lot. And send them a client, you get ten percent.", "shot": "host", "pop": "refer" },
     { "who": "guest", "text": "Ten percent? I've got loads of pals.", "shot": "guest" },
-    { "who": "host", "text": "You've got two. Start with them. swe3we.dev.", "say": "You've got two. Start with them. Swee three wee dot dev.", "shot": "host", "pop": "end", "smug": true }
+    { "who": "host", "text": "You've got two. Start with them. swe3we.dev.", "say": "You've got two. Start with them. Swee swee dot dev.", "shot": "host", "pop": "end", "smug": true }
   ]
 }
