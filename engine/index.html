@@ -28,7 +28,7 @@ const ACC = PROD.accent;
 
 const r = new THREE.WebGLRenderer({ canvas: document.getElementById('gl'), antialias: true, preserveDrawingBuffer: true });
 r.setPixelRatio(1); r.setSize(W, H, false); r.outputColorSpace = THREE.SRGBColorSpace;
-r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.15;
+r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.4;
 r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFShadowMap;
 const scene = new THREE.Scene(); scene.background = new THREE.Color('#0b0d16'); scene.fog = new THREE.Fog('#0b0d16', 4, 9);
 const cam = new THREE.PerspectiveCamera(52, W / H, 0.05, 30);
@@ -39,11 +39,13 @@ const ctex = (w, h, draw) => { const c = document.createElement('canvas'); c.wid
 let seed = 7; const R = () => (seed = (seed * 16807) % 2147483647) / 2147483647; // the same room every frame and every run
 
 // ---------- lights: one warm pendant over the desk, cool fill, rim from the window ----------
-scene.add(new THREE.HemisphereLight('#5a6aa0', '#2a1c12', 1.1));
+scene.add(new THREE.HemisphereLight('#6a7ab0', '#3a2a1c', 1.7));
 const lamp = new THREE.SpotLight('#ffd9a0', 60, 7, 0.9, 0.5, 1.4); lamp.position.set(0, 2.35, 0.15); lamp.target.position.set(0, 0.75, 0.05);
 lamp.castShadow = true; lamp.shadow.mapSize.set(1024, 1024); lamp.shadow.bias = -0.0004; scene.add(lamp, lamp.target);
 const rim = new THREE.DirectionalLight('#7f9cff', 0.7); rim.position.set(2, 2, -2); scene.add(rim);
-const fill = new THREE.PointLight('#ff9a5a', 1.2, 4); fill.position.set(-1.6, 1.2, 1.2); scene.add(fill);
+const fill = new THREE.PointLight('#ff9a5a', 2.2, 4.5); fill.position.set(-1.6, 1.2, 1.2); scene.add(fill);
+// a soft key on the guest, so the kilt, socks and beard read
+const guestKey = new THREE.SpotLight('#fff0dc', 16, 5, 0.55, 0.8, 1.2); guestKey.position.set(-0.2, 1.5, 2.3); guestKey.target.position.set(-0.58, 0.85, 0.42); scene.add(guestKey, guestKey.target);
 
 // ---------- the room ----------
 box(8, 0.1, 6, M('#1a1410'), [0, -0.05, 0]);
@@ -87,7 +89,7 @@ const tartan = ctex(256, 256, (x, w, h) => { const [base, b1, b2, line] = G.tart
 tartan.wrapS = tartan.wrapT = THREE.RepeatWrapping; tartan.repeat.set(1.5, 1.5); tartan.magFilter = THREE.NearestFilter;
 const kiltM = new THREE.MeshStandardMaterial({ map: tartan, roughness: 0.9 });
 const torso = box(0.46, 0.55, 0.3, topM, [0, 1.06, 0], guy);
-box(0.2, 0.08, 0.2, topM, [0, 1.36, 0.02], guy);
+box(0.16, 0.05, 0.16, topM, [0, 1.345, 0.0], guy);
 const head = new THREE.Group(); head.position.set(0, 1.53, 0.02); guy.add(head);
 const skull = mesh(new THREE.IcosahedronGeometry(0.15, 1), skin, [0, 0, 0], head); skull.scale.set(0.95, 1.12, 1);
 if (G.hairStyle !== 'bald') {
@@ -100,7 +102,8 @@ if (G.hat === 'tam') { mesh(new THREE.CylinderGeometry(0.17, 0.15, 0.05, 10), ki
 if (G.hat === 'beanie') { const b = mesh(new THREE.SphereGeometry(0.162, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), M(G.hatColor), [0, 0.1, -0.01], head); b.scale.set(1, 0.95, 1); mesh(new THREE.CylinderGeometry(0.166, 0.166, 0.05, 10), M(shade(G.hatColor, -0.06)), [0, 0.105, -0.01], head); }
 if (G.hat === 'cap') { box(0.3, 0.1, 0.3, M(G.hatColor), [0, 0.18, -0.01], head); box(0.24, 0.02, 0.14, M(G.hatColor), [0, 0.14, 0.18], head); }
 if (G.beard === 'big') {
-  box(0.28, 0.12, 0.13, hairM, [0, -0.16, 0.06], head); box(0.2, 0.08, 0.1, hairM, [0, -0.24, 0.07], head);
+  // kept above the collar and slightly forward, so turning the head never sweeps the beard through the body
+  box(0.28, 0.1, 0.12, hairM, [0, -0.14, 0.08], head); box(0.2, 0.05, 0.09, hairM, [0, -0.205, 0.1], head);
   box(0.04, 0.12, 0.12, hairM, [-0.125, -0.07, 0.05], head); box(0.04, 0.12, 0.12, hairM, [0.125, -0.07, 0.05], head);
 }
 if (G.beard === 'short') box(0.26, 0.08, 0.12, hairM, [0, -0.13, 0.07], head);
@@ -244,7 +247,7 @@ function envAt(who, t) { for (const l of lines) if (l.who === who && t >= l.star
 function lineAt(t) { let cur = null; for (const l of lines) if (t >= l.start - 0.12) cur = l; return cur; }
 const SHOTS = {
   wide: { p: [0.0, 1.6, 3.9], l: [0, 1.2, 0.25] },
-  guest: { p: [0.2, 1.55, 2.25], l: [-0.52, 1.32, 0.42] },
+  guest: { p: [0.2, 1.5, 2.35], l: [-0.52, 1.2, 0.42] },
   host: { p: [-0.15, 1.62, 2.15], l: [0.5, 1.6, 0.1] },
   tv: { p: [-0.95, 1.62, 1.0], l: [-1.6, 1.58, -1.22] },
   end: { p: [0.1, 1.6, 2.6], l: [0.48, 1.5, 0.1] },
