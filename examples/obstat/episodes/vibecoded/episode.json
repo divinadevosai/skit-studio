@@ -1,0 +1,34 @@
+{
+  "title": "Your app looks vibe coded",
+  "pops": {
+    "tells1": { "type": "list", "title": "his-website.com", "subtitle": "the vibe coded checklist", "items": [
+      { "text": "Purple-to-blue gradient", "mark": "cross" },
+      { "text": "Gradient headline", "mark": "cross" },
+      { "text": "Rocket emoji in the title", "mark": "cross" } ] },
+    "tells2": { "type": "list", "title": "his-website.com", "subtitle": "still going", "items": [
+      { "text": "Three icon boxes in a row", "mark": "cross" },
+      { "text": "Glass cards everywhere", "mark": "cross" },
+      { "text": "Fades in on scroll", "mark": "cross" } ] },
+    "builds": { "type": "tiles", "title": "SWE3WE builds", "subtitle": "made to look like you, not like everyone else", "items": [
+      { "title": "Websites", "lines": ["designed, not templated"] },
+      { "title": "Apps", "lines": ["phone and desktop"] },
+      { "title": "Software", "lines": ["AI tools and more"] } ] },
+    "refer": { "type": "button", "kicker": "SWE3WE", "title": "Refer a client", "subtitle": "10% of their first project", "button": "swe3we.dev/refer" },
+    "end": { "type": "end", "name": "SWE3WE", "tagline": "Websites, apps and software that don't look vibe coded.", "cta": "Get in touch", "url": "swe3we.dev", "footnote": "Refer a client, get 10%" }
+  },
+  "lines": [
+    { "who": "host", "text": "Look at you. Your beard's finally staying put, and someone sorted the lighting. I can actually see the kilt.", "shot": "wide", "smug": true },
+    { "who": "guest", "text": "Cheers. Anyway, I made my own website. Rate it. Be honest.", "shot": "guest" },
+    { "who": "host", "text": "Purple-to-blue gradient. Gradient headline. A rocket emoji in the title.", "shot": "host", "pop": "tells1" },
+    { "who": "guest", "text": "The rocket means it's fast.", "shot": "guest" },
+    { "who": "host", "text": "Three icon boxes in a row, glass cards, and everything fades in when you scroll. It looks vibe coded.", "shot": "host", "pop": "tells2", "smug": true },
+    { "who": "guest", "text": "It was vibe coded. Took me ten minutes.", "shot": "guest" },
+    { "who": "host", "text": "It shows. Half the internet looks exactly like this now.", "shot": "wide" },
+    { "who": "guest", "text": "So how do I make it look like a real one?", "shot": "guest" },
+    { "who": "host", "text": "You ask someone who builds them properly. SWE3WE makes websites, apps and software that don't look like everyone else's.", "say": "You ask someone who builds them properly. Swee three wee makes websites, apps and software that don't look like everyone else's.", "shot": "host", "pop": "builds" },
+    { "who": "guest", "text": "Could they do my app idea as well?", "shot": "guest" },
+    { "who": "host", "text": "Websites, apps, AI tools, the lot. And send them a client, you get ten percent.", "shot": "host", "pop": "refer" },
+    { "who": "guest", "text": "Ten percent? I've got loads of pals.", "shot": "guest" },
+    { "who": "host", "text": "You've got two. Start with them. swe3we.dev.", "say": "You've got two. Start with them. Swee three wee dot dev.", "shot": "host", "pop": "end", "smug": true }
+  ]
+}
