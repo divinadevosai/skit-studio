@@ -39,7 +39,7 @@ const ctex = (w, h, draw) => { const c = document.createElement('canvas'); c.wid
 let seed = 7; const R = () => (seed = (seed * 16807) % 2147483647) / 2147483647; // the same room every frame and every run
 
 // ---------- lights: one warm pendant over the desk, cool fill, rim from the window ----------
-scene.add(new THREE.HemisphereLight('#6a7ab0', '#3a2a1c', 1.7));
+const hemi = new THREE.HemisphereLight('#6a7ab0', '#3a2a1c', 1.7); scene.add(hemi);
 const lamp = new THREE.SpotLight('#ffd9a0', 60, 7, 0.9, 0.5, 1.4); lamp.position.set(0, 2.35, 0.15); lamp.target.position.set(0, 0.75, 0.05);
 lamp.castShadow = true; lamp.shadow.mapSize.set(1024, 1024); lamp.shadow.bias = -0.0004; scene.add(lamp, lamp.target);
 const rim = new THREE.DirectionalLight('#7f9cff', 0.7); rim.position.set(2, 2, -2); scene.add(rim);
@@ -334,7 +334,39 @@ function caption(l, t) {
 
 // ---------- one frame ----------
 const lastEnd = lines.at(-1).start + lines.at(-1).dur + 0.3;
+// ---------- moods: a line with "mood": "halloween" turns the room spooky from then on ----------
+const moodBase = { bg: scene.background.clone(), fog: scene.fog.color.clone(), near: scene.fog.near, far: scene.fog.far,
+  lamp: lamp.color.clone(), lampI: lamp.intensity, sky: hemi.color.clone(), ground: hemi.groundColor.clone(), hemiI: hemi.intensity,
+  fill: fill.color.clone(), rim: rim.color.clone() };
+const spookyAt = (lines.find((x) => x.mood === 'halloween') || {}).start;
+const pumpkins = new THREE.Group(); scene.add(pumpkins);
+const pumpkinLights = [];
+for (const [x, z, sz] of [[0.08, 0.32, 1], [0.95, 0.22, 0.8]]) {
+  const pk = new THREE.Group(); pk.position.set(x, 0.78, z); pk.scale.setScalar(0.001); pumpkins.add(pk); pk.userData.size = sz;
+  const body = mesh(new THREE.SphereGeometry(0.075, 12, 9), M('#b8420a', { roughness: 0.8 }), [0, 0.06, 0], pk); body.scale.set(1.2, 0.85, 1.2);
+  mesh(new THREE.CylinderGeometry(0.008, 0.012, 0.04, 6), M('#3d5a1f'), [0, 0.13, 0], pk);
+  const glowM = new THREE.MeshBasicMaterial({ color: '#ffd36a' });
+  for (const ex of [-0.03, 0.03]) mesh(new THREE.ConeGeometry(0.014, 0.022, 3), glowM, [ex, 0.075, 0.088], pk);
+  box(0.06, 0.012, 0.004, glowM, [0, 0.04, 0.09], pk);
+  const pl = new THREE.PointLight('#ff8a2a', 0, 1.2); pl.position.set(0, 0.07, 0.12); pk.add(pl); pumpkinLights.push(pl);
+}
+const spooky = { bg: new THREE.Color('#120a16'), fog: new THREE.Color('#1a0f1e'), lamp: new THREE.Color('#ff8a2a'),
+  sky: new THREE.Color('#3a2050'), ground: new THREE.Color('#1a0d08'), fill: new THREE.Color('#ff6a1a'), rim: new THREE.Color('#7a3cff') };
+function applyMood(t) {
+  const k = spookyAt === undefined ? 0 : clamp((t - spookyAt - 0.3) / 0.8);
+  scene.background.copy(moodBase.bg).lerp(spooky.bg, k);
+  scene.fog.color.copy(moodBase.fog).lerp(spooky.fog, k);
+  scene.fog.near = lerp(moodBase.near, 2.4, k); scene.fog.far = lerp(moodBase.far, 6.5, k);
+  lamp.color.copy(moodBase.lamp).lerp(spooky.lamp, k); lamp.intensity = lerp(moodBase.lampI, 42, k);
+  hemi.color.copy(moodBase.sky).lerp(spooky.sky, k); hemi.groundColor.copy(moodBase.ground).lerp(spooky.ground, k); hemi.intensity = lerp(moodBase.hemiI, 1.0, k);
+  fill.color.copy(moodBase.fill).lerp(spooky.fill, k); rim.color.copy(moodBase.rim).lerp(spooky.rim, k);
+  pumpkins.children.forEach((pk, i) => { const pop = clamp((t - (spookyAt ?? 1e9) - 0.5 - i * 0.25) / 0.35);
+    pk.scale.setScalar(Math.max(0.001, pk.userData.size * (pop < 1 ? 1 + Math.sin(pop * Math.PI) * 0.25 : 1) * pop)); });
+  pumpkinLights.forEach((pl, i) => { pl.intensity = k * (1.6 + Math.sin(t * 13 + i * 2) * 0.3 + Math.sin(t * 29 + i) * 0.2); });
+}
+
 window.renderAt = (t) => {
+  applyMood(t);
   const l = lineAt(t) || lines[0];
   const shotName = t > lastEnd ? 'end' : (l.shot || 'wide');
   const S = SHOTS[shotName] || SHOTS.wide; const shotStart = shotName === 'end' ? lastEnd : l.start - 0.12;

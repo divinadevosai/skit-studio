@@ -1,0 +1,147 @@
+{
+  "title": "Make it spooky",
+  "pops": {
+    "world": {
+      "type": "list",
+      "title": "Custom world",
+      "subtitle": "Haunted study",
+      "items": [
+        {
+          "text": "Fog: thick",
+          "mark": "check"
+        },
+        {
+          "text": "Light: pumpkin orange",
+          "mark": "check"
+        },
+        {
+          "text": "Moon: blood red",
+          "mark": "check"
+        }
+      ]
+    },
+    "make": {
+      "type": "tiles",
+      "title": "Make your own world",
+      "subtitle": "in Divina",
+      "items": [
+        {
+          "title": "Light",
+          "lines": [
+            "any colour"
+          ]
+        },
+        {
+          "title": "Fog",
+          "lines": [
+            "thin to thick"
+          ]
+        },
+        {
+          "title": "Planet",
+          "lines": [
+            "outside the window"
+          ]
+        }
+      ]
+    },
+    "safe": {
+      "type": "list",
+      "title": "Not scary",
+      "subtitle": "how Divina works",
+      "items": [
+        {
+          "text": "Runs on your computer",
+          "mark": "check"
+        },
+        {
+          "text": "Your keys stay encrypted",
+          "mark": "check"
+        },
+        {
+          "text": "Free",
+          "mark": "check"
+        }
+      ]
+    },
+    "end": {
+      "type": "end",
+      "name": "Divina",
+      "tagline": "Your screen, turned into a room.",
+      "cta": "Download free",
+      "url": "divinaos.site",
+      "footnote": "Windows now · Mac & Linux soon"
+    }
+  },
+  "lines": [
+    {
+      "who": "guest",
+      "text": "Divina, it's Halloween, and this room's about as scary as a cup of tea.",
+      "shot": "guest"
+    },
+    {
+      "who": "host",
+      "text": "Fine. Watch this.",
+      "shot": "wide",
+      "mood": "halloween",
+      "smug": true
+    },
+    {
+      "who": "guest",
+      "text": "Oh, that's actually creepy. Did you just do that?",
+      "shot": "guest"
+    },
+    {
+      "who": "host",
+      "text": "Custom worlds. Pick the light, the fog, the colours, even the planet outside the window. It's all in Divina.",
+      "shot": "host",
+      "pop": "world"
+    },
+    {
+      "who": "guest",
+      "text": "Can you make a ghost?",
+      "shot": "guest",
+      "pop": "make"
+    },
+    {
+      "who": "host",
+      "text": "I'm a floating head made of light. I am the ghost.",
+      "shot": "host",
+      "smug": true
+    },
+    {
+      "who": "guest",
+      "text": "Fair. What about a costume for me?",
+      "shot": "guest"
+    },
+    {
+      "who": "host",
+      "text": "You're in a kilt next to a pumpkin. You've already won.",
+      "shot": "wide"
+    },
+    {
+      "who": "guest",
+      "text": "Is all this AI stuff not a bit scary, though?",
+      "shot": "guest"
+    },
+    {
+      "who": "host",
+      "text": "Not me. I run on your own computer, your keys stay encrypted, and I'm free. The scariest thing in here is your website.",
+      "shot": "host",
+      "pop": "safe",
+      "smug": true
+    },
+    {
+      "who": "guest",
+      "text": "Leave my website out of this.",
+      "shot": "guest"
+    },
+    {
+      "who": "host",
+      "text": "Divina. Free for Windows, Mac and Linux coming soon. divinaos.site. Happy Halloween.",
+      "say": "Divina. Free for Windows, Mac and Linux coming soon. Divina O S dot site. Happy Halloween.",
+      "shot": "host",
+      "pop": "end"
+    }
+  ]
+}
