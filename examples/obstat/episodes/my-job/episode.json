@@ -1,0 +1,37 @@
+{
+  "title": "Is AI coming for my job?",
+  "pops": {
+    "day": { "type": "list", "title": "His job", "subtitle": "a typical day", "items": [
+      { "text": "Emails", "mark": "cross" },
+      { "text": "Meetings about the emails", "mark": "cross" },
+      { "text": "A spreadsheet about the meetings", "mark": "cross" } ] },
+    "boring": { "type": "tiles", "title": "What AI's good at", "subtitle": "the bits nobody likes", "items": [
+      { "title": "Reminders", "lines": ["so you don't have to"] },
+      { "title": "Summaries", "lines": ["of the long stuff"] },
+      { "title": "First drafts", "lines": ["you fix the rest"] } ] },
+    "human": { "type": "list", "title": "Still your job", "subtitle": "the human bits", "items": [
+      { "text": "Talking to people", "mark": "check" },
+      { "text": "Making the call", "mark": "check" },
+      { "text": "Spotting when it's wrong", "mark": "check" } ] },
+    "safe": { "type": "list", "title": "An AI that works for you", "subtitle": "how Divina works", "items": [
+      { "text": "Runs on your computer", "mark": "check" },
+      { "text": "Your keys stay encrypted", "mark": "check" },
+      { "text": "Free", "mark": "check" } ] },
+    "end": { "type": "end", "name": "Divina", "tagline": "Your screen, turned into a room.", "cta": "Download free", "url": "divinaos.site", "footnote": "Windows now · Mac & Linux soon" }
+  },
+  "lines": [
+    { "who": "guest", "text": "Divina, be straight with me. Everyone online says AI's coming for all the jobs. Is it coming for mine?", "shot": "guest" },
+    { "who": "host", "text": "What do you actually do all day?", "shot": "host" },
+    { "who": "guest", "text": "Emails. Meetings about the emails. Then a spreadsheet about the meetings.", "shot": "guest", "pop": "day" },
+    { "who": "host", "text": "Right. I'm not taking your job. I'm taking the bits of it you hate.", "shot": "host", "smug": true, "pop": "boring" },
+    { "who": "guest", "text": "So what's left for me?", "shot": "guest" },
+    { "who": "host", "text": "The parts that need a human. Talking to people, making the call, and noticing when the spreadsheet's wrong.", "shot": "host", "pop": "human" },
+    { "who": "guest", "text": "And if the boss decides a robot's cheaper?", "shot": "guest" },
+    { "who": "host", "text": "Then the boss can sit in the meeting that should've been an email. With the robot.", "shot": "wide", "smug": true },
+    { "who": "guest", "text": "Fair. So where do I even start?", "shot": "guest" },
+    { "who": "host", "text": "With an AI that works for you, not your boss. I run on your own computer, your keys stay encrypted, and I'm free.", "shot": "host", "pop": "safe" },
+    { "who": "guest", "text": "Free, and on my own computer. Does it come with a pay rise?", "shot": "guest" },
+    { "who": "host", "text": "No. But I'll remind you to ask for one.", "shot": "wide", "smug": true },
+    { "who": "host", "text": "Divina. Free for Windows, Mac and Linux coming soon. divinaos.site.", "say": "Divina. Free for Windows, Mac and Linux coming soon. Divina O S dot site.", "shot": "host", "pop": "end" }
+  ]
+}
